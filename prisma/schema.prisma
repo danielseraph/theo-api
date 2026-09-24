@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  NONE
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
+enum LeadershipCategory {
+  BOARD_OF_DIRECTORS
+  EXECUTIVE_TEAM
+  ADVISORY_BOARD
+  OTHER
+}
+
+enum GalleryCategory {
+  EVENTS
+  PROGRAMS
+  COMMUNITY
+  AWARDS
+  OTHER
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendeeStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
+}
+
+enum ApplicationProgram {
+  SCHOLARSHIP
+  MENTORSHIP
+  GRANT
+  OTHER
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+enum PartnerType {
+  CORPORATE
+  NGO
+  GOVERNMENT
+  OTHER
+}
+
+enum DonationFrequency {
+  ONE_TIME
+  MONTHLY
+  YEARLY
+}
+
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ResourceCategory {
+  GUIDE
+  REPORT
+  TEMPLATE
+  OTHER
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+model User {
+  id           String   @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  phoneNumber  String?
+  state        String?
+  country      String?
+  passwordHash String
+  role         Role     @default(ADMIN)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  posts         Post[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// Updated Registration (Passwordless support & area of interest)
+model Registration {
+  id             String   @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String   @unique
+  phoneNumber    String
+  state          String
+  country        String
+  passwordHash   String?  // Optional for passwordless
+  areaOfInterest String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("registrations")
+}
+
+// Updated Post (categories & featured cover images)
+model Post {
+  id            String     @id @default(uuid())
+  title         String
+  slug          String     @unique
+  content       String
+  category      String?
+  coverImageUrl String?
+  mediaType     MediaType  @default(NONE)
+  mediaUrl      String?
+  mediaId       String?
+  status        PostStatus @default(DRAFT)
+  authorId      String
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([slug])
+  @@index([status])
+  @@index([category])
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Media {
+  id           String    @id @default(uuid())
+  url          String
+  publicId     String
+  type         MediaType
+  mimeType     String
+  size         Int
+  originalName String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("media")
+}
+
+model ContactMessage {
+  id        String        @id @default(uuid())
+  fullName  String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// 1. Leadership Members
+model LeadershipMember {
+  id           String             @id @default(uuid())
+  name         String
+  role         String
+  bio          String?            @db.Text
+  category     LeadershipCategory
+  photoUrl     String?
+  displayOrder Int                @default(0)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([category])
+  @@index([displayOrder])
+  @@map("leadership_members")
+}
+
+// 2. Gallery Items
+model GalleryItem {
+  id          String          @id @default(uuid())
+  title       String?
+  description String?         @db.Text
+  category    GalleryCategory
+  mediaType   MediaType       @default(IMAGE)
+  url         String
+  isFeatured  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([category])
+  @@index([isFeatured])
+  @@map("gallery_items")
+}
+
+// 3. Events & RSVPs
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  slug        String      @unique
+  description String      @db.Text
+  date        DateTime
+  venue       String?
+  virtualLink String?
+  price       Float?
+  currency    String?     @default("USD")
+  status      EventStatus @default(UPCOMING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  attendees EventAttendee[]
+
+  @@index([slug])
+  @@index([date])
+  @@index([status])
+  @@map("events")
+}
+
+model EventAttendee {
+  id           String         @id @default(uuid())
+  eventId      String
+  firstName    String
+  lastName     String
+  email        String
+  ticketsCount Int            @default(1)
+  status       AttendeeStatus @default(REGISTERED)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([email])
+  @@map("event_attendees")
+}
+
+// 4. Beneficiary Applications
+model Application {
+  id                 String             @id @default(uuid())
+  trackingCode       String             @unique
+  program            ApplicationProgram
+  firstName          String
+  lastName           String
+  email              String
+  phone              String?
+  personalInfo       String?            @db.Text
+  statementOfPurpose String             @db.Text
+  status             ApplicationStatus  @default(PENDING)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([trackingCode])
+  @@index([program])
+  @@index([status])
+  @@map("applications")
+}
+
+// 5. Volunteers & Careers
+model VolunteerApplication {
+  id        String            @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  role      String
+  skills    String?           @db.Text
+  resumeUrl String?
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([status])
+  @@map("volunteer_applications")
+}
+
+model CareerApplication {
+  id        String            @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  role      String
+  skills    String?           @db.Text
+  resumeUrl String?
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([status])
+  @@map("career_applications")
+}
+
+// 6. Corporate Partnerships
+model PartnerInquiry {
+  id              String            @id @default(uuid())
+  organization    String
+  contactName     String
+  email           String
+  phone           String?
+  type            PartnerType
+  proposalSummary String            @db.Text
+  status          ApplicationStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@map("partner_inquiries")
+}
+
+// 7. Donations & Transactions
+model Donation {
+  id             String            @id @default(uuid())
+  donorName      String?
+  email          String?
+  amount         Float
+  currency       String            @default("USD")
+  frequency      DonationFrequency @default(ONE_TIME)
+  reference      String            @unique // gateway or transfer ref
+  isBankTransfer Boolean           @default(false)
+  status         DonationStatus    @default(PENDING)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([reference])
+  @@index([status])
+  @@map("donations")
+}
+
+// 8. Resources & Educational Downloads
+model Resource {
+  id            String           @id @default(uuid())
+  title         String
+  description   String?          @db.Text
+  category      ResourceCategory
+  fileUrl       String
+  downloadCount Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([category])
+  @@map("resources")
+}
+
+// 9. Success Stories
+model SuccessStory {
+  id              String   @id @default(uuid())
+  title           String
+  beneficiaryName String
+  story           String   @db.Text
+  impactBefore    String?  @db.Text
+  impactAfter     String?  @db.Text
+  programTag      String?
+  imageUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([programTag])
+  @@map("success_stories")
+}

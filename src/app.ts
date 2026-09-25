@@ -12,6 +12,9 @@ import { swaggerSpec } from './config/swagger';
 
 const app = express();
 
+// Trust proxy - required for rate limiting behind a proxy
+app.set('trust proxy', 1);
+
 // 1. helmet with sensible defaults
 app.use(helmet());
 
@@ -72,3 +75,4 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(errorHandler);
 
 export default app;
+

@@ -12,11 +12,17 @@ import { swaggerSpec } from './config/swagger';
 
 const app = express();
 
+// Trust proxy (required for Railway / Load Balancers and rate limiting)
+app.set('trust proxy', 1);
+
 // 1. helmet with sensible defaults
 app.use(helmet());
 
 // 2. cors
 const allowedOrigins = [env.FRONTEND_URL];
+if (env.ADMIN_URL) {
+  allowedOrigins.push(env.ADMIN_URL);
+}
 if (env.NODE_ENV === 'development') {
   allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
 }

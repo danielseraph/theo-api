@@ -11,6 +11,31 @@ const controller = new RegistrationsController();
 
 /**
  * @swagger
+ * /api/v1/registrations/count:
+ *   get:
+ *     summary: Get total number of registered community members
+ *     tags: [Registrations]
+ *     responses:
+ *       200:
+ *         description: Total member count
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 245
+ */
+publicRouter.get('/count', controller.getMemberCount);
+
+/**
+ * @swagger
  * /api/v1/registrations:
  *   post:
  *     summary: Register as a new community member

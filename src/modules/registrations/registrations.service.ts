@@ -22,6 +22,11 @@ export class RegistrationsService {
     return this.repository.create({ ...input, passwordHash });
   }
 
+  async getMemberCount() {
+    const total = await this.repository.count();
+    return { total };
+  }
+
   async getAllRegistrations(query: ListRegistrationsQuery) {
     const { page = 1, limit = 20 } = query;
     const { registrations, total } = await this.repository.findAll(query);

@@ -14,6 +14,15 @@ export class RegistrationsController {
     }
   };
 
+  getMemberCount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.getMemberCount();
+      successResponse(res, result, 'Member count retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getAllRegistrations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { registrations, pagination } = await this.service.getAllRegistrations(req.query as any);

@@ -2,14 +2,20 @@ import { z } from 'zod';
 import { MediaType, PostStatus } from '@prisma/client';
 
 export const createPostSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters').max(500),
-  content: z.string().min(10, 'Content must be at least 10 characters'),
+  title: z.string().min(3, 'Title must be at least 3 characters').max(255),
+  content: z.string().min(1, 'Content is required'),
   category: z.string().optional().nullable(),
   coverImageUrl: z.string().url().optional().nullable(),
-  mediaType: z.nativeEnum(MediaType).default('NONE'),
+  mediaType: z.preprocess(
+    (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+    z.nativeEnum(MediaType).default('NONE')
+  ),
   mediaUrl: z.string().url().optional().nullable(),
   mediaId: z.string().optional().nullable(),
-  status: z.nativeEnum(PostStatus).default('DRAFT'),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+    z.nativeEnum(PostStatus).default('DRAFT')
+  ),
 });
 
 export const updatePostSchema = createPostSchema.partial();

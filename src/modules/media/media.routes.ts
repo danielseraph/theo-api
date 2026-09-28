@@ -40,7 +40,8 @@ router.use(authorize('ADMIN'));
  *       201:
  *         description: Media uploaded successfully
  */
-router.post('/', uploadMedia.single('file'), mediaController.uploadMedia);
+router.post('/', uploadMedia.any(), mediaController.uploadMedia);
+router.post('/upload', uploadMedia.any(), mediaController.uploadMedia);
 
 /**
  * @swagger

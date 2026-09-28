@@ -27,6 +27,7 @@ router.use('/admin/dashboard', dashboardRouter);
 router.use('/admin/registrations', registrationAdminRouter);
 router.use('/admin/posts', postAdminRouter);
 router.use('/admin/media', mediaAdminRouter);
+router.use('/admin/upload', mediaAdminRouter);
 router.use('/admin/contact-messages', contactAdminRouter);
 router.use('/admin/gallery', adminGalleryRouter);
 router.use('/admin/events', adminEventsRouter);

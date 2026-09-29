@@ -51,9 +51,21 @@ enum GalleryCategory {
   OTHER
 }
 
+enum EventType {
+  TRAINING
+  WORKSHOP
+  COMMUNITY_OUTREACH
+  FUNDRAISING
+  WEBINAR
+  CONFERENCE
+  CEREMONY
+  OTHER
+}
+
 enum EventStatus {
   UPCOMING
   ONGOING
+  PAST
   COMPLETED
   CANCELLED
 }
@@ -277,24 +289,28 @@ model GalleryItem {
 
 // 3. Events & RSVPs
 model Event {
-  id          String      @id @default(uuid())
-  title       String
-  slug        String      @unique
-  description String      @db.Text
-  date        DateTime
-  venue       String?
-  virtualLink String?
-  price       Float?
-  currency    String?     @default("USD")
-  status      EventStatus @default(UPCOMING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String      @id @default(uuid())
+  title         String
+  slug          String      @unique
+  description   String      @db.Text
+  type          EventType   @default(OTHER)
+  status        EventStatus @default(UPCOMING)
+  eventDate     DateTime
+  time          String
+  location      String
+  seats         String?
+  isFree        Boolean     @default(true)
+  fee           String?
+  coverImageUrl String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   attendees EventAttendee[]
 
   @@index([slug])
-  @@index([date])
+  @@index([eventDate])
   @@index([status])
+  @@index([type])
   @@map("events")
 }
 
@@ -304,6 +320,7 @@ model EventAttendee {
   firstName    String
   lastName     String
   email        String
+  phoneNumber  String?
   ticketsCount Int            @default(1)
   status       AttendeeStatus @default(REGISTERED)
   createdAt    DateTime       @default(now())

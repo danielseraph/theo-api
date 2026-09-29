@@ -15,10 +15,18 @@ export class EventsService {
   }
 
   async getEvents(query: ListEventsQuery) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
     const events = await eventsRepository.findAll(query);
     const total = await eventsRepository.count(query);
-    const meta = buildPaginationMeta(total, query.page || 1, query.limit || 20);
-    return { events, meta };
+    const pagination = buildPaginationMeta(total, page, limit);
+    return { events, pagination };
+  }
+
+  async getEventByIdOrSlug(idOrSlug: string) {
+    const event = await eventsRepository.findByIdOrSlug(idOrSlug);
+    if (!event) throw new NotFoundError('Event not found');
+    return event;
   }
 
   async getEventById(id: string) {
@@ -28,27 +36,36 @@ export class EventsService {
   }
 
   async updateEvent(id: string, data: UpdateEventInput) {
-    const event = await eventsRepository.findById(id);
-    if (!event) throw new NotFoundError('Event not found');
-    return eventsRepository.update(id, data);
+    const existing = await this.getEventById(id);
+
+    let slug: string | undefined = undefined;
+    if (data.title && data.title !== existing.title) {
+      slug = await generateUniqueSlug(data.title, (s) => eventsRepository.slugExists(s, id));
+    }
+
+    return eventsRepository.update(id, { ...data, slug });
   }
 
   async updateEventStatus(id: string, status: EventStatus) {
-    const event = await eventsRepository.findById(id);
-    if (!event) throw new NotFoundError('Event not found');
+    await this.getEventById(id);
     return eventsRepository.updateStatus(id, status);
   }
 
   async deleteEvent(id: string) {
-    const event = await eventsRepository.findById(id);
-    if (!event) throw new NotFoundError('Event not found');
+    await this.getEventById(id);
     return eventsRepository.delete(id);
   }
 
   async rsvp(eventId: string, data: RsvpEventInput) {
-    const event = await eventsRepository.findById(eventId);
-    if (!event) throw new NotFoundError('Event not found');
+    await this.getEventByIdOrSlug(eventId);
     return eventsRepository.rsvp(eventId, data);
+  }
+
+  async getEventAttendees(eventId: string) {
+    await this.getEventByIdOrSlug(eventId);
+    const attendees = await eventsRepository.getAttendees(eventId);
+    const totalAttendees = await eventsRepository.countAttendees(eventId);
+    return { attendees, totalAttendees };
   }
 }
 
